@@ -60,7 +60,7 @@ describe Spree::Money do
     end
 
     it "passed in option string" do
-      money = Spree::Money.new(10, :symbol_position => "after", :html => false)
+      money = Spree::Money.new(10, :symbol_position => :after :html => false)
       money.to_s.should == "10.00 $"
     end
 
