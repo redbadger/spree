@@ -145,20 +145,8 @@ describe Spree::Product do
     context "#display_price" do
       before { product.price = 10.55 }
 
-      context "with display_currency set to true" do
-        before { Spree::Config[:display_currency] = true }
-
-        it "shows the currency" do
-          product.display_price.to_s.should == "$10.55 USD"
-        end
-      end
-
-      context "with display_currency set to false" do
-        before { Spree::Config[:display_currency] = false }
-
-        it "does not include the currency" do
-          product.display_price.to_s.should == "$10.55"
-        end
+      it "shows the amount" do
+        expect(product.display_price.to_s).to eq("$10.55")
       end
 
       context "with currency set to JPY" do
@@ -188,10 +176,10 @@ describe Spree::Product do
         product.should_not be_available
       end
 
-      it "should not be available if destroyed" do 
-        product.destroy 
-        product.should_not be_available 
-      end 
+      it "should not be available if destroyed" do
+        product.destroy
+        product.should_not be_available
+      end
     end
 
     context "variants_and_option_values" do
