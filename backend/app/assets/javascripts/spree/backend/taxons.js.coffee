@@ -6,6 +6,7 @@ $(document).ready ->
       url: Spree.routes.classifications_api,
       method: 'PUT',
       data:
+        token: Spree.api_key,
         product_id: ui.item.data('product-id'),
         taxon_id: $('#taxon_id').val(),
         position: ui.item.index()
@@ -20,6 +21,7 @@ $(document).ready ->
         data: (term, page) ->
           per_page: 50,
           page: page,
+          token: Spree.api_key,
           q:
             name_cont: term
         results: (data, page) ->
@@ -36,7 +38,8 @@ $(document).ready ->
     $.ajax
       url: Spree.routes.taxon_products_api,
       data:
-        id: e.val
+        id: e.val,
+        token: Spree.api_key
       success: (data) ->
         el.empty();
         if data.products.length == 0
@@ -48,4 +51,3 @@ $(document).ready ->
               product.image = product.master.images[0].small_url
             el.append(productTemplate({ product: product }))
           $('#sorting_explanation').show()
-

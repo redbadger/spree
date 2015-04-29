@@ -145,21 +145,6 @@ module Spree
         end
       end
 
-      context "jsonp" do
-        it "retrieves a list of products of jsonp" do
-          api_get :index, {:callback => 'callback'}
-          response.body.should =~ /^callback\(.*\)$/
-          response.header['Content-Type'].should include('application/javascript')
-        end
-
-        # Regression test for #4332
-        it "does not escape quotes" do
-          api_get :index, {:callback => 'callback'}
-          response.body.should =~ /^callback\({"count":1,"total_count":1/
-          response.header['Content-Type'].should include('application/javascript')
-        end
-      end
-
       it "can search for products" do
         create(:product, :name => "The best product in the world")
         api_get :index, :q => { :name_cont => "best" }
