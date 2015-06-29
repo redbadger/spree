@@ -4,7 +4,7 @@ describe Spree::CreditCard do
   let(:valid_credit_card_attributes) do
     { :number => '4111111111111111',
       :verification_value => '123',
-      :expiry => "12 / 14",
+      :expiry => "12 / 20",
       :name => "Spree Commerce" }
   end
 
@@ -113,7 +113,7 @@ describe Spree::CreditCard do
       # (Time.now).
       # However it has expired in rails's configured time zone (Time.current),
       # which is the value we should be respecting.
-      time = Time.new(2014, 04, 30, 23, 0, 0, "-07:00")
+      time = Time.new(2020, 04, 30, 23, 0, 0, "-07:00")
       Timecop.freeze(time) do
         credit_card.month = 1.month.ago.month
         credit_card.year = 1.month.ago.year
@@ -222,39 +222,39 @@ describe Spree::CreditCard do
   # Regression test for #3847 & #3896
   context "#expiry=" do
     it "can set with a 2-digit month and year" do
-      credit_card.expiry = '04 / 14'
+      credit_card.expiry = '04 / 20'
       expect(credit_card.month).to eq(4)
-      expect(credit_card.year).to eq(2014)
+      expect(credit_card.year).to eq(2020)
     end
 
     it "can set with a 2-digit month and 4-digit year" do
-      credit_card.expiry = '04 / 2014'
+      credit_card.expiry = '04 / 2020'
       expect(credit_card.month).to eq(4)
-      expect(credit_card.year).to eq(2014)
+      expect(credit_card.year).to eq(2020)
     end
 
     it "can set with a 2-digit month and 4-digit year without whitespace" do
-      credit_card.expiry = '04/14'
+      credit_card.expiry = '04/20'
       expect(credit_card.month).to eq(4)
-      expect(credit_card.year).to eq(2014)
+      expect(credit_card.year).to eq(2020)
     end
 
     it "can set with a 2-digit month and 4-digit year without whitespace" do
-      credit_card.expiry = '04/2014'
+      credit_card.expiry = '04/2020'
       expect(credit_card.month).to eq(4)
-      expect(credit_card.year).to eq(2014)
+      expect(credit_card.year).to eq(2020)
     end
 
     it "can set with a 2-digit month and 4-digit year without whitespace and slash" do
-      credit_card.expiry = '042014'
+      credit_card.expiry = '042020'
       expect(credit_card.month).to eq(4)
-      expect(credit_card.year).to eq(2014)
+      expect(credit_card.year).to eq(2020)
     end
 
     it "can set with a 2-digit month and 2-digit year without whitespace and slash" do
-      credit_card.expiry = '0414'
+      credit_card.expiry = '0420'
       expect(credit_card.month).to eq(4)
-      expect(credit_card.year).to eq(2014)
+      expect(credit_card.year).to eq(2020)
     end
 
     it "does not blow up when passed an empty string" do
