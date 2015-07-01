@@ -10,12 +10,8 @@ module Spree
 
     it "returns Spree::Money settings" do
       api_get :money
-      response.should be_success
-      json_response["symbol"].should == "$"
-      json_response["symbol_position"].should == "before"
-      json_response["no_cents"].should == false
-      json_response["decimal_mark"].should == "."
-      json_response["thousands_separator"].should == ","
+      expect(response).to be_success
+      expect(json_response["symbol"]).to eq("$")
     end
 
     it "returns some configuration settings" do
