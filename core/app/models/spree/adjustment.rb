@@ -83,7 +83,7 @@ module Spree
     # If the adjustment has no source, do not attempt to re-calculate the amount.
     # Chances are likely that this was a manually created adjustment in the admin backend.
     def update!(target = nil)
-      return self.amount if closed?
+      return amount if closed?
       if source.present?
         amount = source.compute_amount(target || adjustable)
         self.update_columns(
@@ -94,7 +94,7 @@ module Spree
           self.update_column(:eligible, source.promotion.eligible?(adjustable))
         end
       end
-      amount || self.amount
+      amount
     end
 
     private
