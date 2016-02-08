@@ -1,9 +1,16 @@
 handle_ajax_error = (XMLHttpRequest, textStatus, errorThrown) ->
-  $.jstree.rollback(last_rollback)
-  $("#ajax_error").show().html("<strong>" + server_error + "</strong><br />" + taxonomy_tree_error)
+  error_json = XMLHttpRequest.responseJSON
+
+  if error_json.errors
+    error_string = $.map(error_json.errors, (value, key) -> (key.charAt(0).toUpperCase() + key.substr(1)) + " " + value).join('\n')
+  else
+    error_string = error_json.exception
+
+  $.jstree.rollback(window.last_rollback)
+  $("#ajax_error").slideDown().html("<strong>" + "Error Updating Taxonomy" + "</strong><br />" + error_string)
 
 handle_move = (e, data) ->
-  last_rollback = data.rlbk
+  window.last_rollback = data.rlbk
   position = data.rslt.cp
   node = data.rslt.o
   new_parent = data.rslt.np
@@ -25,7 +32,7 @@ handle_move = (e, data) ->
   true
 
 handle_create = (e, data) ->
-  last_rollback = data.rlbk
+  window.last_rollback = data.rlbk
   node = data.rslt.obj
   name = data.rslt.name
   position = data.rslt.position
@@ -46,7 +53,7 @@ handle_create = (e, data) ->
       node.prop('id', data.id)
 
 handle_rename = (e, data) ->
-  last_rollback = data.rlbk
+  window.last_rollback = data.rlbk
   node = data.rslt.obj
   name = data.rslt.new_name
 
@@ -65,7 +72,7 @@ handle_rename = (e, data) ->
     error: handle_ajax_error
 
 handle_delete = (e, data) ->
-  last_rollback = data.rlbk
+  window.last_rollback = data.rlbk
   node = data.rslt.obj
   delete_url = base_url.clone()
   delete_url.setPath delete_url.path() + '/' + node.prop("id")
@@ -81,8 +88,8 @@ handle_delete = (e, data) ->
         },
         error: handle_ajax_error
     else
-      $.jstree.rollback(last_rollback)
-      last_rollback = null
+      $.jstree.rollback(window.last_rollback)
+      window.last_rollback = null
 
 root = exports ? this
 root.setup_taxonomy_tree = (taxonomy_id) ->
@@ -95,7 +102,7 @@ root.setup_taxonomy_tree = (taxonomy_id) ->
       data:
         token: Spree.api_key
       success: (taxonomy) ->
-        last_rollback = null
+        window.last_rollback = null
 
         conf =
           json_data:
@@ -115,6 +122,10 @@ root.setup_taxonomy_tree = (taxonomy_id) ->
                 position = m.cp
                 node = m.o
                 new_parent = m.np
+
+                # wait for AJAX requests to finish
+                if $.active > 0
+                  return false
 
                 # no parent or cant drag and drop
                 if !new_parent || node.prop("rel") == "root"
@@ -140,6 +151,9 @@ root.setup_taxonomy_tree = (taxonomy_id) ->
 
     $("#taxonomy_tree a").on "dblclick", (e) ->
       $("#taxonomy_tree").jstree("rename", this)
+
+    $(".container").on "click", (e) ->
+      $("#ajax_error").slideUp().html()
 
     # surpress form submit on enter/return
     $(document).keypress (e) ->
