@@ -1,8 +1,13 @@
 handle_ajax_error = (XMLHttpRequest, textStatus, errorThrown) ->
-  errors = JSON.parse(XMLHttpRequest.responseText).errors
-  error_string = $.map(errors, (value, key) -> (key.charAt(0).toUpperCase() + key.substr(1)) + " " + value).join('\n')
+  error_json = XMLHttpRequest.responseJSON
+
+  if error_json.errors
+    error_string = $.map(error_json.errors, (value, key) -> (key.charAt(0).toUpperCase() + key.substr(1)) + " " + value).join('\n')
+  else
+    error_string = error_json.exception
+
   $.jstree.rollback(window.last_rollback)
-  $("#ajax_error").show().html("<strong>" + "Error Updating Taxonomy" + "</strong><br />" + error_string)
+  $("#ajax_error").slideDown().html("<strong>" + "Error Updating Taxonomy" + "</strong><br />" + error_string)
 
 handle_move = (e, data) ->
   window.last_rollback = data.rlbk
@@ -146,6 +151,9 @@ root.setup_taxonomy_tree = (taxonomy_id) ->
 
     $("#taxonomy_tree a").on "dblclick", (e) ->
       $("#taxonomy_tree").jstree("rename", this)
+
+    $(".container").on "click", (e) ->
+      $("#ajax_error").slideUp().html()
 
     # surpress form submit on enter/return
     $(document).keypress (e) ->
