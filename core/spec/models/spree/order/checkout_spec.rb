@@ -141,7 +141,7 @@ describe Spree::Order do
 
       it "cannot transition to address without any line items" do
         order.line_items.should be_blank
-        lambda { order.next! }.should raise_error(StateMachine::InvalidTransition, /#{Spree.t(:there_are_no_items_for_this_order)}/)
+        lambda { order.next! }.should raise_error(StateMachines::InvalidTransition, /#{Spree.t(:there_are_no_items_for_this_order)}/)
       end
     end
 
@@ -220,7 +220,7 @@ describe Spree::Order do
           context "if there are no shipping rates for any shipment" do
             it "raises an InvalidTransitionError" do
               transition = lambda { order.next! }
-              transition.should raise_error(StateMachine::InvalidTransition, /#{Spree.t(:items_cannot_be_shipped)}/)
+              transition.should raise_error(StateMachines::InvalidTransition, /#{Spree.t(:items_cannot_be_shipped)}/)
             end
 
             it "deletes all the shipments" do
@@ -377,10 +377,10 @@ describe Spree::Order do
         context 'when there is only an invalid payment' do
           let(:payment_state) { 'failed' }
 
-          it "raises a StateMachine::InvalidTransition" do
+          it "raises a StateMachines::InvalidTransition" do
             expect {
               order.next!
-            }.to raise_error(StateMachine::InvalidTransition, /#{Spree.t(:no_payment_found)}/)
+            }.to raise_error(StateMachines::InvalidTransition, /#{Spree.t(:no_payment_found)}/)
 
             expect(order.errors[:base]).to include(Spree.t(:no_payment_found))
           end

@@ -9,7 +9,7 @@ require 'monetize'
 require 'paperclip'
 require 'paranoia'
 require 'ransack'
-require 'state_machine'
+require 'state_machines-activerecord'
 require 'friendly_id'
 require 'font-awesome-rails'
 require 'responders'
@@ -75,12 +75,3 @@ require 'spree/core/controller_helpers/store'
 require 'spree/core/controller_helpers/strong_parameters'
 
 require 'spree/core/importer'
-
-# Hack waiting on https://github.com/pluginaweek/state_machine/pull/275
-module StateMachine
-  module Integrations
-    module ActiveModel
-      public :around_validation
-    end
-  end
-end
