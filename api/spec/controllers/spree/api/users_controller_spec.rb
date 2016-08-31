@@ -1,10 +1,10 @@
 require 'spec_helper'
 
 module Spree
-  describe Api::UsersController do
+  describe Api::UsersController, :type => :controller do
     render_views
 
-    let(:user) { create(:user, spree_api_key: rand) }
+    let(:user) { create(:user, spree_api_key: rand.to_s) }
     let(:stranger) { create(:user, :email => 'stranger@example.com') }
     let(:attributes) { [:id, :email, :created_at, :updated_at] }
 
@@ -12,7 +12,7 @@ module Spree
       it "can get own details" do
         api_get :show, id: user.id, token: user.spree_api_key
 
-        json_response['email'].should eq user.email
+        expect(json_response['email']).to eq user.email
       end
 
       it "cannot get other users details" do
@@ -92,9 +92,9 @@ module Spree
         2.times { create(:user) }
         api_get :index, token: user.spree_api_key
 
-        Spree.user_class.count.should eq 3
-        json_response['count'].should eq 1
-        json_response['users'].size.should eq 1
+        expect(Spree.user_class.count).to eq 3
+        expect(json_response['count']).to eq 1
+        expect(json_response['users'].size).to eq 1
       end
     end
 
@@ -104,48 +104,48 @@ module Spree
       sign_in_as_admin!
 
       it "gets all users" do
-        Spree::LegacyUser.stub(:find_by).with(hash_including(:spree_api_key)) { current_api_user }
+        allow(Spree::LegacyUser).to receive(:find_by).with(hash_including(:spree_api_key)) { current_api_user }
 
         2.times { create(:user) }
 
         api_get :index
-        Spree.user_class.count.should eq 2
-        json_response['count'].should eq 2
-        json_response['users'].size.should eq 2
+        expect(Spree.user_class.count).to eq 2
+        expect(json_response['count']).to eq 2
+        expect(json_response['users'].size).to eq 2
       end
 
       it 'can control the page size through a parameter' do
         2.times { create(:user) }
         api_get :index, :per_page => 1
-        json_response['count'].should == 1
-        json_response['current_page'].should == 1
-        json_response['pages'].should == 2
+        expect(json_response['count']).to eq(1)
+        expect(json_response['current_page']).to eq(1)
+        expect(json_response['pages']).to eq(2)
       end
 
       it 'can query the results through a paramter' do
         expected_result = create(:user, :email => 'brian@spreecommerce.com')
         api_get :index, :q => { :email_cont => 'brian' }
-        json_response['count'].should == 1
-        json_response['users'].first['email'].should eq expected_result.email
+        expect(json_response['count']).to eq(1)
+        expect(json_response['users'].first['email']).to eq expected_result.email
       end
 
       it "can create" do
         api_post :create, :user => { :email => "new@example.com", :password => 'spree123', :password_confirmation => 'spree123' }
-        json_response.should have_attributes(attributes)
-        response.status.should == 201
+        expect(json_response).to have_attributes(attributes)
+        expect(response.status).to eq(201)
       end
 
       it "can destroy user without orders" do
         user.orders.destroy_all
         api_delete :destroy, :id => user.id
-        response.status.should == 204
+        expect(response.status).to eq(204)
       end
 
       it "cannot destroy user with orders" do
         create(:completed_order_with_totals, :user => user)
         api_delete :destroy, :id => user.id
-        json_response["exception"].should eq "Spree::Core::DestroyWithOrdersError"
-        response.status.should == 422
+        expect(json_response["exception"]).to eq "Spree::Core::DestroyWithOrdersError"
+        expect(response.status).to eq(422)
       end
 
     end

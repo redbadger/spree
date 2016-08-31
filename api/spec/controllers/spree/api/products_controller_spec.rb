@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'shared_examples/protect_product_actions'
 
 module Spree
-  describe Spree::Api::ProductsController do
+  describe Spree::Api::ProductsController, :type => :controller do
     render_views
 
     let!(:product) { create(:product) }
@@ -51,48 +51,20 @@ module Spree
 
       it "retrieves a list of products" do
         api_get :index
-        json_response["products"].first.should have_attributes(show_attributes)
-        json_response["total_count"].should == 1
-        json_response["current_page"].should == 1
-        json_response["pages"].should == 1
-        json_response["per_page"].should == Kaminari.config.default_per_page
+        expect(json_response["products"].first).to have_attributes(show_attributes)
+        expect(json_response["total_count"]).to eq(1)
+        expect(json_response["current_page"]).to eq(1)
+        expect(json_response["pages"]).to eq(1)
+        expect(json_response["per_page"]).to eq(Kaminari.config.default_per_page)
       end
 
       it "retrieves a list of products by id" do
         api_get :index, :ids => [product.id]
-        json_response["products"].first.should have_attributes(show_attributes)
-        json_response["total_count"].should == 1
-        json_response["current_page"].should == 1
-        json_response["pages"].should == 1
-        json_response["per_page"].should == Kaminari.config.default_per_page
-      end
-
-      context "specifying a rabl template for a custom action" do
-        before do
-          Spree::Api::ProductsController.class_eval do
-            def custom_show
-              @product = find_product(params[:id])
-              respond_with(@product)
-            end
-          end
-        end
-
-        it "uses the specified custom template through the request header" do
-          request.headers['X-Spree-Template'] = 'show'
-          api_get :custom_show, :id => product.id
-          response.should render_template('spree/api/products/show')
-        end
-
-        it "uses the specified custom template through the template URL parameter" do
-          api_get :custom_show, :id => product.id, :template => 'show'
-          response.should render_template('spree/api/products/show')
-        end
-
-        it "falls back to the default template if the specified template does not exist" do
-          request.headers['X-Spree-Template'] = 'invoice'
-          api_get :show, :id => product.id
-          response.should render_template('spree/api/products/show')
-        end
+        expect(json_response["products"].first).to have_attributes(show_attributes)
+        expect(json_response["total_count"]).to eq(1)
+        expect(json_response["current_page"]).to eq(1)
+        expect(json_response["pages"]).to eq(1)
+        expect(json_response["per_page"]).to eq(Kaminari.config.default_per_page)
       end
 
       context "product has more than one price" do
@@ -107,49 +79,49 @@ module Spree
       it "retrieves a list of products by ids string" do
         second_product = create(:product)
         api_get :index, :ids => [product.id, second_product.id].join(",")
-        json_response["products"].first.should have_attributes(show_attributes)
-        json_response["products"][1].should have_attributes(show_attributes)
-        json_response["total_count"].should == 2
-        json_response["current_page"].should == 1
-        json_response["pages"].should == 1
-        json_response["per_page"].should == Kaminari.config.default_per_page
+        expect(json_response["products"].first).to have_attributes(show_attributes)
+        expect(json_response["products"][1]).to have_attributes(show_attributes)
+        expect(json_response["total_count"]).to eq(2)
+        expect(json_response["current_page"]).to eq(1)
+        expect(json_response["pages"]).to eq(1)
+        expect(json_response["per_page"]).to eq(Kaminari.config.default_per_page)
       end
 
       it "does not return inactive products when queried by ids" do
         api_get :index, :ids => [inactive_product.id]
-        json_response["count"].should == 0
+        expect(json_response["count"]).to eq(0)
       end
 
       it "does not list unavailable products" do
         api_get :index
-        json_response["products"].first["name"].should_not eq("inactive")
+        expect(json_response["products"].first["name"]).not_to eq("inactive")
       end
 
       context "pagination" do
         it "can select the next page of products" do
           second_product = create(:product)
           api_get :index, :page => 2, :per_page => 1
-          json_response["products"].first.should have_attributes(show_attributes)
-          json_response["total_count"].should == 2
-          json_response["current_page"].should == 2
-          json_response["pages"].should == 2
+          expect(json_response["products"].first).to have_attributes(show_attributes)
+          expect(json_response["total_count"]).to eq(2)
+          expect(json_response["current_page"]).to eq(2)
+          expect(json_response["pages"]).to eq(2)
         end
 
         it 'can control the page size through a parameter' do
           create(:product)
           api_get :index, :per_page => 1
-          json_response['count'].should == 1
-          json_response['total_count'].should == 2
-          json_response['current_page'].should == 1
-          json_response['pages'].should == 2
+          expect(json_response['count']).to eq(1)
+          expect(json_response['total_count']).to eq(2)
+          expect(json_response['current_page']).to eq(1)
+          expect(json_response['pages']).to eq(2)
         end
       end
 
       it "can search for products" do
         create(:product, :name => "The best product in the world")
         api_get :index, :q => { :name_cont => "best" }
-        json_response["products"].first.should have_attributes(show_attributes)
-        json_response["count"].should == 1
+        expect(json_response["products"].first).to have_attributes(show_attributes)
+        expect(json_response["count"]).to eq(1)
       end
 
       it "gets a single product" do
@@ -157,15 +129,18 @@ module Spree
         product.variants.create!
         product.variants.first.images.create!(:attachment => image("thinking-cat.jpg"))
         product.set_property("spree", "rocks")
+        product.taxons << create(:taxon)
+
         api_get :show, :id => product.to_param
-        json_response.should have_attributes(show_attributes)
-        json_response['variants'].first.should have_attributes([:name,
+
+        expect(json_response).to have_attributes(show_attributes)
+        expect(json_response['variants'].first).to have_attributes([:name,
                                                               :is_master,
                                                               :price,
                                                               :images,
                                                               :in_stock])
 
-        json_response['variants'].first['images'].first.should have_attributes([:attachment_file_name,
+        expect(json_response['variants'].first['images'].first).to have_attributes([:attachment_file_name,
                                                                                 :attachment_width,
                                                                                 :attachment_height,
                                                                                 :attachment_content_type,
@@ -174,9 +149,12 @@ module Spree
                                                                                 :product_url,
                                                                                 :large_url])
 
-        json_response["product_properties"].first.should have_attributes([:value,
+        expect(json_response["product_properties"].first).to have_attributes([:value,
                                                                          :product_id,
                                                                          :property_name])
+
+        expect(json_response["classifications"].first).to have_attributes([:taxon_id, :position, :taxon])
+        expect(json_response["classifications"].first['taxon']).to have_attributes([:id, :name, :pretty_name, :permalink, :taxonomy_id, :parent_id])
       end
 
       context "tracking is disabled" do
@@ -200,11 +178,11 @@ module Spree
 
         specify do
           api_get :show, :id => product.to_param
-          json_response["slug"].should =~ /and-1-ways/
+          expect(json_response["slug"]).to match(/and-1-ways/)
           product.destroy
 
           api_get :show, :id => other_product.id
-          json_response["slug"].should =~ /droids/
+          expect(json_response["slug"]).to match(/droids/)
         end
       end
 
@@ -220,11 +198,11 @@ module Spree
 
       it "can learn how to create a new product" do
         api_get :new
-        json_response["attributes"].should == new_attributes.map(&:to_s)
+        expect(json_response["attributes"]).to eq(new_attributes.map(&:to_s))
         required_attributes = json_response["required_attributes"]
-        required_attributes.should include("name")
-        required_attributes.should include("price")
-        required_attributes.should include("shipping_category_id")
+        expect(required_attributes).to include("name")
+        expect(required_attributes).to include("price")
+        expect(required_attributes).to include("shipping_category_id")
       end
 
       it_behaves_like "modifying product actions are restricted"
@@ -238,10 +216,10 @@ module Spree
 
       it "can see all products" do
         api_get :index
-        json_response["products"].count.should == 2
-        json_response["count"].should == 2
-        json_response["current_page"].should == 1
-        json_response["pages"].should == 1
+        expect(json_response["products"].count).to eq(2)
+        expect(json_response["count"]).to eq(2)
+        expect(json_response["current_page"]).to eq(1)
+        expect(json_response["pages"]).to eq(1)
       end
 
       # Regression test for #1626
@@ -252,12 +230,12 @@ module Spree
 
         it "does not include deleted products" do
           api_get :index
-          json_response["products"].count.should == 2
+          expect(json_response["products"].count).to eq(2)
         end
 
         it "can include deleted products" do
           api_get :index, :show_deleted => 1
-          json_response["products"].count.should == 3
+          expect(json_response["products"].count).to eq(3)
         end
       end
 
@@ -266,8 +244,8 @@ module Spree
           api_post :create, :product => { :name => "The Other Product",
                                           :price => 19.99,
                                           :shipping_category_id => create(:shipping_category).id }
-          json_response.should have_attributes(base_attributes)
-          response.status.should == 201
+          expect(json_response).to have_attributes(base_attributes)
+          expect(response.status).to eq(201)
         end
 
         it "creates with embedded variants" do
@@ -309,6 +287,13 @@ module Spree
           expect(json_response['option_types'].count).to eq(2)
         end
 
+        it "creates product with option_types ids" do
+          option_type = create(:option_type)
+          product_data.merge!(option_type_ids: [option_type.id])
+          api_post :create, product: product_data
+          expect(json_response['option_types'].first['id']).to eq option_type.id
+        end
+
         it "creates with shipping categories" do
           hash = { :name => "The Other Product",
                    :price => 19.99,
@@ -346,25 +331,25 @@ module Spree
 
           it "can still create a product" do
             api_post :create, :product => product_data, :token => "fake"
-            json_response.should have_attributes(show_attributes)
-            response.status.should == 201
+            expect(json_response).to have_attributes(show_attributes)
+            expect(response.status).to eq(201)
           end
         end
 
         it "cannot create a new product with invalid attributes" do
-          api_post :create, :product => {}
-          response.status.should == 422
-          json_response["error"].should == "Invalid resource. Please fix errors and try again."
+          api_post :create, product: {}
+          expect(response.status).to eq(422)
+          expect(json_response["error"]).to eq("Invalid resource. Please fix errors and try again.")
           errors = json_response["errors"]
           errors.delete("slug") # Don't care about this one.
-          errors.keys.should =~ ["name", "price", "shipping_category_id"]
+          expect(errors.keys).to match_array(["name", "price", "shipping_category_id"])
         end
       end
 
       context 'updating a product' do
         it "can update a product" do
           api_put :update, :id => product.to_param, :product => { :name => "New and Improved Product!" }
-          response.status.should == 200
+          expect(response.status).to eq(200)
         end
 
         it "can create new option types on a product" do
@@ -409,9 +394,9 @@ module Spree
 
         it "cannot update a product with an invalid attribute" do
           api_put :update, :id => product.to_param, :product => { :name => "" }
-          response.status.should == 422
-          json_response["error"].should == "Invalid resource. Please fix errors and try again."
-          json_response["errors"]["name"].should == ["can't be blank"]
+          expect(response.status).to eq(422)
+          expect(json_response["error"]).to eq("Invalid resource. Please fix errors and try again.")
+          expect(json_response["errors"]["name"]).to eq(["can't be blank"])
         end
 
         # Regression test for #4123
@@ -428,10 +413,10 @@ module Spree
       end
 
       it "can delete a product" do
-        product.deleted_at.should be_nil
+        expect(product.deleted_at).to be_nil
         api_delete :destroy, :id => product.to_param
-        response.status.should == 204
-        product.reload.deleted_at.should_not be_nil
+        expect(response.status).to eq(204)
+        expect(product.reload.deleted_at).not_to be_nil
       end
     end
   end

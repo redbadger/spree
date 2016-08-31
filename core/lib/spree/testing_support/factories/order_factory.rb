@@ -4,10 +4,26 @@ FactoryGirl.define do
     bill_address
     completed_at nil
     email { user.email }
+    store
+
+    transient do
+      line_items_price BigDecimal.new(10)
+    end
 
     factory :order_with_totals do
-      after(:create) do |order|
-        create(:line_item, order: order)
+      after(:create) do |order, evaluator|
+        create(:line_item, order: order, price: evaluator.line_items_price)
+        order.line_items.reload # to ensure order.line_items is accessible after
+      end
+    end
+
+    factory :order_with_line_item_quantity do
+      transient do
+        line_items_quantity 1
+      end
+
+      after(:create) do |order, evaluator|
+        create(:line_item, order: order, price: evaluator.line_items_price, quantity: evaluator.line_items_quantity)
         order.line_items.reload # to ensure order.line_items is accessible after
       end
     end
@@ -16,15 +32,16 @@ FactoryGirl.define do
       bill_address
       ship_address
 
-      ignore do
-        line_items_count 5
+      transient do
+        line_items_count 1
+        shipment_cost 100
       end
 
       after(:create) do |order, evaluator|
-        create_list(:line_item, evaluator.line_items_count, order: order)
+        create_list(:line_item, evaluator.line_items_count, order: order, price: evaluator.line_items_price)
         order.line_items.reload
 
-        create(:shipment, order: order)
+        create(:shipment, order: order, cost: evaluator.shipment_cost)
         order.shipments.reload
 
         order.update!

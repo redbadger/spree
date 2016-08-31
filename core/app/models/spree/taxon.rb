@@ -6,10 +6,16 @@ module Spree
     has_many :classifications, -> { order(:position) }, dependent: :delete_all, inverse_of: :taxon
     has_many :products, through: :classifications
 
+    has_and_belongs_to_many :prototypes, join_table: :spree_taxons_prototypes
+
     before_create :set_permalink
 
     validates :name, presence: true
+    validates :meta_keywords, length: { maximum: 255 }
+    validates :meta_description, length: { maximum: 255 }
+    validates :meta_title, length: { maximum: 255 }
 
+    after_save :touch_ancestors_and_taxonomy
     after_touch :touch_ancestors_and_taxonomy
 
     has_attached_file :icon,
@@ -20,7 +26,7 @@ module Spree
       default_url: '/assets/default_taxon.png'
 
     validates_attachment :icon,
-      content_type: { content_type: ["image/jpg", "image/jpeg", "image/png"] }
+      content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
 
     # indicate which filters should be used for a taxon
     # this method should be customized to your own site
@@ -36,7 +42,7 @@ module Spree
 
     # Return meta_title if set otherwise generates from root name and/or taxon name
     def seo_title
-      if meta_title
+      unless meta_title.blank?
         meta_title
       else
         root? ? name : "#{root.name} - #{name}"
@@ -58,8 +64,7 @@ module Spree
     end
 
     def active_products
-      scope = products.active
-      scope
+      products.active
     end
 
     def pretty_name
@@ -85,7 +90,7 @@ module Spree
       # Touches all ancestors at once to avoid recursive taxonomy touch, and reduce queries.
       self.class.where(id: ancestors.pluck(:id)).update_all(updated_at: Time.now)
       # Have taxonomy touch happen in #touch_ancestors_and_taxonomy rather than association option in order for imports to override.
-      taxonomy.touch
+      taxonomy.try!(:touch)
     end
   end
 end

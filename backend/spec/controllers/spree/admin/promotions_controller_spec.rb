@@ -1,15 +1,21 @@
 require 'spec_helper'
 
-describe Spree::Admin::PromotionsController do
+describe Spree::Admin::PromotionsController, :type => :controller do
   stub_authorization!
 
   let!(:promotion1) { create(:promotion, name: "name1", code: "code1", path: "path1") }
   let!(:promotion2) { create(:promotion, name: "name2", code: "code2", path: "path2") }
+  let!(:category) { create :promotion_category }
 
   context "#index" do
     it "succeeds" do
       spree_get :index
       expect(assigns[:promotions]).to match_array [promotion2, promotion1]
+    end
+
+    it "assigns promotion categories" do
+      spree_get :index
+      expect(assigns[:promotion_categories]).to match_array [category]
     end
 
     context "search" do

@@ -1,7 +1,7 @@
 module Spree
   class ProductsController < Spree::StoreController
-    before_filter :load_product, :only => :show
-    before_filter :load_taxon, :only => :index
+    before_action :load_product, only: :show
+    before_action :load_taxon, only: :index
 
     rescue_from ActiveRecord::RecordNotFound, :with => :render_404
     helper 'spree/taxons'
@@ -22,7 +22,11 @@ module Spree
 
     private
       def accurate_title
-        @product ? @product.name : super
+        if @product
+          @product.meta_title.blank? ? @product.name : @product.meta_title
+        else
+          super
+        end
       end
 
       def load_product

@@ -1,1 +1,1 @@
-## Spree 2.3.2 (unreleased) ##
+## Spree 2.4.0 (unreleased) ##

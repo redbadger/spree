@@ -11,17 +11,12 @@ module Spree
 
     after_touch :touch_all_products
 
-    def self.find_all_by_prototype(prototype)
-      id = prototype
-      id = prototype.id if prototype.class == Prototype
-      joins("LEFT JOIN properties_prototypes ON property_id = #{self.table_name}.id").
-        where(prototype_id: id)
-    end
+    self.whitelisted_ransackable_attributes = ['presentation']
 
     private
 
     def touch_all_products
-      products.each(&:touch)
+      products.update_all(updated_at: Time.current)
     end
   end
 end

@@ -6,18 +6,20 @@ module Spree
   class CheckoutController < Spree::StoreController
     ssl_required
 
-    before_filter :load_order_with_lock
+    before_action :load_order_with_lock
+    before_action :ensure_valid_state_lock_version, only: [:update]
+    before_action :set_state_if_present
 
-    before_filter :ensure_order_not_completed
-    before_filter :ensure_checkout_allowed
-    before_filter :ensure_sufficient_stock_lines
-    before_filter :ensure_valid_state
+    before_action :ensure_order_not_completed
+    before_action :ensure_checkout_allowed
+    before_action :ensure_sufficient_stock_lines
+    before_action :ensure_valid_state
 
-    before_filter :associate_user
-    before_filter :check_authorization
-    before_filter :apply_coupon_code
+    before_action :associate_user
+    before_action :check_authorization
+    before_action :apply_coupon_code
 
-    before_filter :setup_for_current_state
+    before_action :setup_for_current_state
 
     helper 'spree/orders'
 
@@ -72,7 +74,21 @@ module Spree
       def load_order_with_lock
         @order = current_order(lock: true)
         redirect_to spree.cart_path and return unless @order
+      end
 
+      def ensure_valid_state_lock_version
+        if params[:order] && params[:order][:state_lock_version]
+          @order.with_lock do
+            unless @order.state_lock_version == params[:order].delete(:state_lock_version).to_i
+              flash[:error] = Spree.t(:order_already_updated)
+              redirect_to checkout_state_path(@order.state) and return
+            end
+            @order.increment!(:state_lock_version)
+          end
+        end
+      end
+
+      def set_state_if_present
         if params[:state]
           redirect_to checkout_state_path(@order.state) if @order.can_go_to_state?(params[:state]) && !skip_state_validation?
           @order.state = params[:state]
@@ -127,6 +143,13 @@ module Spree
           @differentiator.missing.each do |variant, quantity|
             @order.contents.remove(variant, quantity)
           end
+
+          # @order.contents.remove did transitively call reload in the past.
+          # Hiding the fact that the machine advanced already to "payment" state.
+          #
+          # As an intermediary step to optimize reloads out of high volume code path
+          # the reload was lifted here and will be removed by later passes.
+          @order.reload
         end
 
         if try_spree_current_user && try_spree_current_user.respond_to?(:payment_sources)

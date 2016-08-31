@@ -1,15 +1,17 @@
 module Spree
   class Zone < Spree::Base
-    has_many :zone_members, dependent: :destroy, class_name: "Spree::ZoneMember"
-    has_many :tax_rates, dependent: :destroy
+    has_many :zone_members, dependent: :destroy, class_name: "Spree::ZoneMember", inverse_of: :zone
+    has_many :tax_rates, dependent: :destroy, inverse_of: :zone
     has_and_belongs_to_many :shipping_methods, :join_table => 'spree_shipping_methods_zones'
 
-    validates :name, presence: true, uniqueness: true
+    validates :name, presence: true, uniqueness: { allow_blank: true }
     after_save :remove_defunct_members
     after_save :remove_previous_default
 
     alias :members :zone_members
     accepts_nested_attributes_for :zone_members, allow_destroy: true, reject_if: proc { |a| a['zoneable_id'].blank? }
+
+    self.whitelisted_ransackable_attributes = ['description']
 
     def self.default_tax
       where(default_tax: true).first
@@ -92,23 +94,11 @@ module Spree
     end
 
     def country_ids=(ids)
-      zone_members.destroy_all
-      ids.reject{ |id| id.blank? }.map do |id|
-        member = ZoneMember.new
-        member.zoneable_type = 'Spree::Country'
-        member.zoneable_id = id
-        members << member
-      end
+      set_zone_members(ids, 'Spree::Country')
     end
 
     def state_ids=(ids)
-      zone_members.destroy_all
-      ids.reject{ |id| id.blank? }.map do |id|
-        member = ZoneMember.new
-        member.zoneable_type = 'Spree::State'
-        member.zoneable_id = id
-        members << member
-      end
+      set_zone_members(ids, 'Spree::State')
     end
 
     # Indicates whether the specified zone falls entirely within the zone performing
@@ -135,6 +125,16 @@ module Spree
 
       def remove_previous_default
         Spree::Zone.where('id != ?', self.id).update_all(default_tax: false) if default_tax
+      end
+
+      def set_zone_members(ids, type)
+        zone_members.destroy_all
+        ids.reject{ |id| id.blank? }.map do |id|
+          member = ZoneMember.new
+          member.zoneable_type = type
+          member.zoneable_id = id
+          members << member
+        end
       end
   end
 end

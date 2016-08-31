@@ -59,7 +59,7 @@ module Spree
     end
 
     def update_payment_total
-      order.payment_total = payments.completed.sum(:amount)
+      order.payment_total = payments.completed.includes(:refunds).inject(0) { |sum, payment| sum + payment.amount - payment.refunds.sum(:amount) }
     end
 
     def update_shipment_total
@@ -158,7 +158,7 @@ module Spree
       last_state = order.payment_state
       if payments.present? && payments.valid.size == 0
         order.payment_state = 'failed'
-      elsif !payments.present? && order.state == 'canceled'
+      elsif order.state == 'canceled' && order.payment_total == 0
         order.payment_state = 'void'
       elsif order.state == 'canceled' && order.payment_total == 0 && payments.completed.size > 0
         order.payment_state = 'void'
@@ -170,10 +170,5 @@ module Spree
       order.state_changed('payment') if last_state != order.payment_state
       order.payment_state
     end
-
-    private
-      def round_money(n)
-        (n * 100).round / 100.0
-      end
   end
 end

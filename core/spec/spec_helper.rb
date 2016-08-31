@@ -7,6 +7,7 @@ if ENV["COVERAGE"]
     add_group 'Mailers', 'app/mailers'
     add_group 'Models', 'app/models'
     add_group 'Views', 'app/views'
+    add_group 'Jobs', 'app/jobs'
     add_group 'Libraries', 'lib'
   end
 end
@@ -25,8 +26,7 @@ require 'rspec/rails'
 require 'database_cleaner'
 require 'ffaker'
 
-require "support/big_decimal"
-require "support/test_gateway"
+Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
 
 if ENV["CHECK_TRANSLATIONS"]
   require "spree/testing_support/i18n"
@@ -48,6 +48,7 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = true
 
   config.before :each do
+    Rails.cache.clear
     reset_spree_preferences
   end
 

@@ -9,8 +9,9 @@ module Spree
 
     def initialize(item)
       @item = item
+
       # Don't attempt to reload the item from the DB if it's not there
-      @item.reload if @item.persisted?
+      @item.reload if @item.instance_of?(Shipment) && @item.persisted?
     end
 
     def update
@@ -27,17 +28,20 @@ module Spree
       #
       # It also fits the criteria for sales tax as outlined here:
       # http://www.boe.ca.gov/formspubs/pub113/
-      # 
+      #
       # Tax adjustments come in not one but *two* exciting flavours:
       # Included & additional
 
       # Included tax adjustments are those which are included in the price.
-      # These ones should not effect the eventual total price.
+      # These ones should not affect the eventual total price.
       #
-      # Additional tax adjustments are the opposite; effecting the final total.
+      # Additional tax adjustments are the opposite, affecting the final total.
       promo_total = 0
       run_callbacks :promo_adjustments do
-        promotion_total = adjustments.promotion.reload.map(&:update!).compact.sum
+        promotion_total = adjustments.promotion.reload.map do |adjustment|
+          adjustment.update!(@item)
+        end.compact.sum
+
         unless promotion_total == 0
           choose_best_promotion_adjustment
         end
@@ -48,7 +52,7 @@ module Spree
       additional_tax_total = 0
       run_callbacks :tax_adjustments do
         tax = (item.respond_to?(:all_adjustments) ? item.all_adjustments : item.adjustments).tax
-        included_tax_total = tax.included.reload.map(&:update!).compact.sum
+        included_tax_total = tax.is_included.reload.map(&:update!).compact.sum
         additional_tax_total = tax.additional.reload.map(&:update!).compact.sum
       end
 
@@ -66,13 +70,13 @@ module Spree
     # have the same amount, then it will pick the latest one.
     def choose_best_promotion_adjustment
       if best_promotion_adjustment
-        other_promotions = self.adjustments.promotion.where("id NOT IN (?)", best_promotion_adjustment.id)
+        other_promotions = self.adjustments.promotion.where.not(id: best_promotion_adjustment.id)
         other_promotions.update_all(:eligible => false)
       end
     end
 
     def best_promotion_adjustment
-      @best_promotion_adjustment ||= adjustments.promotion.eligible.reorder("amount ASC, created_at DESC").first
+      @best_promotion_adjustment ||= adjustments.promotion.eligible.reorder("amount ASC, created_at DESC, id DESC").first
     end
   end
 end

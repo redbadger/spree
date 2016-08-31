@@ -2,8 +2,8 @@ module Spree
   module Api
     class PaymentsController < Spree::Api::BaseController
 
-      before_filter :find_order
-      before_filter :find_payment, only: [:update, :show, :authorize, :purchase, :capture, :void, :credit]
+      before_action :find_order
+      before_action :find_payment, only: [:update, :show, :authorize, :purchase, :capture, :void]
 
       def index
         @payments = @order.payments.ransack(params[:q]).result.page(params[:page]).per(params[:per_page])
@@ -12,7 +12,7 @@ module Spree
 
       def new
         @payment_methods = Spree::PaymentMethod.available
-        respond_with(@payment_method)
+        respond_with(@payment_methods)
       end
 
       def create
@@ -26,7 +26,7 @@ module Spree
 
       def update
         authorize! params[:action], @payment
-        if ! @payment.pending?
+        if !@payment.editable?
           render 'update_forbidden', status: 403
         elsif @payment.update_attributes(payment_params)
           respond_with(@payment, default_template: :show)
@@ -55,19 +55,11 @@ module Spree
         perform_payment_action(:void_transaction)
       end
 
-      def credit
-        if params[:amount].to_f > @payment.credit_allowed
-          render 'credit_over_limit', status: 422
-        else
-          perform_payment_action(:credit, params[:amount])
-        end
-      end
-
       private
 
         def find_order
           @order = Spree::Order.find_by(number: order_id)
-          authorize! :read, @order
+          authorize! :read, @order, order_token
         end
 
         def find_payment
@@ -75,7 +67,7 @@ module Spree
         end
 
         def perform_payment_action(action, *args)
-          authorize! action, Payment
+          authorize! action, Spree::Payment
           @payment.send("#{action}!", *args)
           respond_with(@payment, default_template: :show)
         end

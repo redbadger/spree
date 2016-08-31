@@ -2,7 +2,7 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
   include Spree::Backend::Callbacks
 
   helper_method :new_object_url, :edit_object_url, :object_url, :collection_url
-  before_filter :load_resource, :except => [:update_positions]
+  before_action :load_resource, except: :update_positions
   rescue_from ActiveRecord::RecordNotFound, :with => :resource_not_found
 
   respond_to :html
@@ -70,12 +70,14 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
   end
 
   def update_positions
-    params[:positions].each do |id, index|
-      model_class.find(id).update_attributes(:position => index)
+    ActiveRecord::Base.transaction do
+      params[:positions].each do |id, index|
+        model_class.find(id).set_list_position(index)
+      end
     end
 
     respond_to do |format|
-      format.js  { render :text => 'Ok' }
+      format.js  { render text: 'Ok' }
     end
   end
 
@@ -239,7 +241,7 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
     #
     # Other controllers can, should, override it to set custom logic
     def permitted_resource_params
-      params.require(object_name).permit!
+      params[object_name].present? ? params.require(object_name).permit! : ActionController::Parameters.new
     end
 
     def collection_actions

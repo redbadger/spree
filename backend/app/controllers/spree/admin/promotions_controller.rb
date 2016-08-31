@@ -1,7 +1,7 @@
 module Spree
   module Admin
     class PromotionsController < ResourceController
-      before_filter :load_data
+      before_action :load_data
 
       helper 'spree/promotion_rules'
 
@@ -12,6 +12,7 @@ module Spree
 
         def load_data
           @calculators = Rails.application.config.spree.calculators.promotion_actions_create_adjustments
+          @promotion_categories = Spree::PromotionCategory.order(:name)
         end
 
         def collection

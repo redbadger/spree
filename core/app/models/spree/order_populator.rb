@@ -9,8 +9,11 @@ module Spree
       @errors = ActiveModel::Errors.new(self)
     end
 
-    def populate(variant_id, quantity)
-      attempt_cart_add(variant_id, quantity)
+    def populate(variant_id, quantity, options = {})
+      ActiveSupport::Deprecation.warn "OrderPopulator is deprecated and will be removed from Spree 3, use OrderContents with order.contents.add instead.", caller
+      # protect against passing a nil hash being passed in
+      # due to an empty params[:options]
+      attempt_cart_add(variant_id, quantity, options || {})
       valid?
     end
 
@@ -20,7 +23,7 @@ module Spree
 
     private
 
-    def attempt_cart_add(variant_id, quantity)
+    def attempt_cart_add(variant_id, quantity, options = {})
       quantity = quantity.to_i
       # 2,147,483,647 is crazy.
       # See issue #2695.
@@ -30,12 +33,10 @@ module Spree
       end
 
       variant = Spree::Variant.find(variant_id)
-      if quantity > 0
-        line_item = @order.contents.add(variant, quantity, currency)
-        unless line_item.valid?
-          errors.add(:base, line_item.errors.messages.values.join(" "))
-          return false
-        end
+      begin
+        @order.contents.add(variant, quantity, options.merge(currency: currency))
+      rescue ActiveRecord::RecordInvalid => e
+        errors.add(:base, e.record.errors.messages.values.join(" "))
       end
     end
   end

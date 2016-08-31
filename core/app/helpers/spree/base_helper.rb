@@ -48,7 +48,7 @@ module Spree
       meta.reverse_merge!({
         keywords: current_store.meta_keywords,
         description: current_store.meta_description,
-      })
+      }) if meta[:keywords].blank? or meta[:description].blank?
       meta
     end
 
@@ -78,23 +78,34 @@ module Spree
       nil
     end
 
-    def breadcrumbs(taxon, separator="&nbsp;&raquo;&nbsp;")
+    def breadcrumbs(taxon, separator="&nbsp;&raquo;&nbsp;", breadcrumb_class="inline")
       return "" if current_page?("/") || taxon.nil?
-      separator = raw(separator)
-      crumbs = [content_tag(:li, link_to(Spree.t(:home), spree.root_path) + separator)]
+
+      crumbs = [[Spree.t(:home), spree.root_path]]
+
       if taxon
-        crumbs << content_tag(:li, link_to(Spree.t(:products), products_path) + separator)
-        crumbs << taxon.ancestors.collect { |ancestor| content_tag(:li, link_to(ancestor.name , seo_url(ancestor)) + separator) } unless taxon.ancestors.empty?
-        crumbs << content_tag(:li, content_tag(:span, link_to(taxon.name , seo_url(taxon))))
+        crumbs << [Spree.t(:products), products_path]
+        crumbs += taxon.ancestors.collect { |a| [a.name, spree.nested_taxons_path(a.permalink)] } unless taxon.ancestors.empty?
+        crumbs << [taxon.name, spree.nested_taxons_path(taxon.permalink)]
       else
-        crumbs << content_tag(:li, content_tag(:span, Spree.t(:products)))
+        crumbs << [Spree.t(:products), products_path]
       end
-      crumb_list = content_tag(:ul, raw(crumbs.flatten.map{|li| li.mb_chars}.join), class: 'inline')
-      content_tag(:nav, crumb_list, id: 'breadcrumbs', class: 'sixteen columns')
+
+      separator = raw(separator)
+
+      crumbs.map! do |crumb|
+        content_tag(:li, itemscope:"itemscope", itemtype:"http://data-vocabulary.org/Breadcrumb") do
+          link_to(crumb.last, itemprop: "url") do
+            content_tag(:span, crumb.first, itemprop: "title")
+          end + (crumb == crumbs.last ? '' : separator)
+        end
+      end
+
+      content_tag(:nav, content_tag(:ul, raw(crumbs.map(&:mb_chars).join), class: breadcrumb_class), id: 'breadcrumbs', class: 'sixteen columns')
     end
 
     def taxons_tree(root_taxon, current_taxon, max_level = 1)
-      return '' if max_level < 1 || root_taxon.children.empty?
+      return '' if max_level < 1 || root_taxon.leaf?
       content_tag :ul, class: 'taxons-list' do
         root_taxon.children.map do |taxon|
           css_class = (current_taxon && current_taxon.self_and_ancestors.include?(taxon)) ? 'current' : nil
@@ -152,7 +163,7 @@ module Spree
     end
 
     def link_to_tracking(shipment, options = {})
-      return unless shipment.tracking
+      return unless shipment.tracking && shipment.shipping_method
 
       if shipment.tracking_url
         link_to(shipment.tracking, shipment.tracking_url, options)
@@ -162,9 +173,10 @@ module Spree
     end
 
     private
+
     # Returns style of image or nil
     def image_style_from_method_name(method_name)
-      if style = method_name.to_s.sub(/_image$/, '')
+      if method_name.to_s.match(/_image$/) && style = method_name.to_s.sub(/_image$/, '')
         possible_styles = Spree::Image.attachment_definitions[:attachment][:styles]
         style if style.in? possible_styles.with_indifferent_access
       end

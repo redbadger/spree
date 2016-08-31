@@ -1,6 +1,6 @@
 module Spree
   class LineItem < Spree::Base
-    before_validation :adjust_quantity
+    before_validation :invalid_quantity_check
     belongs_to :order, class_name: "Spree::Order", inverse_of: :line_items, touch: true
     belongs_to :variant, class_name: "Spree::Variant", inverse_of: :line_items
     belongs_to :tax_category, class_name: "Spree::TaxCategory"
@@ -24,6 +24,7 @@ module Spree
 
     validate :ensure_proper_currency
     before_destroy :update_inventory
+    before_destroy :destroy_inventory_units
 
     after_save :update_inventory
     after_save :update_adjustments
@@ -33,6 +34,9 @@ module Spree
     delegate :name, :description, :sku, :should_track_inventory?, to: :variant
 
     attr_accessor :target_shipment
+
+    self.whitelisted_ransackable_associations = ['variant']
+    self.whitelisted_ransackable_attributes = ['variant_id']
 
     def copy_price
       if variant
@@ -57,8 +61,12 @@ module Spree
       amount + promo_total
     end
 
+    def discounted_money
+      Spree::Money.new(discounted_amount, { currency: currency })
+    end
+
     def final_amount
-      amount + adjustment_total.to_f
+      amount + adjustment_total
     end
     alias total final_amount
 
@@ -73,7 +81,7 @@ module Spree
     alias display_total money
     alias display_amount money
 
-    def adjust_quantity
+    def invalid_quantity_check
       self.quantity = 0 if quantity.nil? || quantity < 0
     end
 
@@ -95,6 +103,25 @@ module Spree
       Spree::Variant.unscoped { super }
     end
 
+    def options=(options={})
+      return unless options.present?
+
+      opts = options.dup # we will be deleting from the hash, so leave the caller's copy intact
+
+      currency = opts.delete(:currency) || order.try(:currency)
+
+      if currency
+        self.currency = currency
+        self.price    = variant.price_in(currency).amount +
+                        variant.price_modifier_amount_in(currency, opts)
+      else
+        self.price    = variant.price +
+                        variant.price_modifier_amount(opts)
+      end
+
+      self.assign_attributes opts
+    end
+
     private
       def update_inventory
         if (changed? || target_shipment.present?) && self.order.has_checkout_step?("delivery")
@@ -102,9 +129,13 @@ module Spree
         end
       end
 
+      def destroy_inventory_units
+        inventory_units.destroy_all
+      end
+
       def update_adjustments
         if quantity_changed?
-          update_tax_charge # Called to ensure pre_tax_amount is updated. 
+          update_tax_charge # Called to ensure pre_tax_amount is updated.
           recalculate_adjustments
         end
       end
