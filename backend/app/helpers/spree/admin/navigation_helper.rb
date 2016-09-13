@@ -32,7 +32,7 @@ module Spree
         selected = if options[:match_path].is_a? Regexp
           request.fullpath =~ options[:match_path]
         elsif options[:match_path]
-          request.fullpath.starts_with?("#{admin_path}#{options[:match_path]}")
+          request.fullpath.starts_with?("#{spree.admin_path}#{options[:match_path]}")
         else
           args.include?(controller.controller_name.to_sym)
         end
@@ -145,7 +145,7 @@ module Spree
       end
 
       def configurations_sidebar_menu_item(link_text, url, options = {})
-        is_active = url.ends_with?(controller.controller_name) || 
+        is_active = url.ends_with?(controller.controller_name) ||
                     url.ends_with?("#{controller.controller_name}/edit") ||
                     url.ends_with?("#{controller.controller_name.singularize}/edit")
         options.merge!(:class => is_active ? 'active' : nil)
