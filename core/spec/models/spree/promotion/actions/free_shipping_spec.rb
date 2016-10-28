@@ -4,6 +4,7 @@ describe Spree::Promotion::Actions::FreeShipping do
   let(:order) { create(:completed_order_with_totals) }
   let(:promotion) { create(:promotion) }
   let(:action) { Spree::Promotion::Actions::FreeShipping.create }
+  let(:payload) { { order: order } }
 
   # From promotion spec:
   context "#perform" do
