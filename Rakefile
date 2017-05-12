@@ -62,11 +62,11 @@ namespace :gem do
       puts "########################### #{gem_name} #########################"
       puts "Deleting #{gem_name}/pkg"
       FileUtils.rm_rf("#{gem_name}/pkg")
-      cmd = "cd #{gem_name} && bundle exec rake gem"; puts cmd; system cmd
+      sh "cd #{gem_name} && bundle exec rake gem"
     end
     puts "Deleting pkg directory"
     FileUtils.rm_rf("pkg")
-    cmd = "bundle exec rake gem"; puts cmd; system cmd
+    sh "bundle exec rake gem"
   end
 end
 
@@ -79,26 +79,35 @@ namespace :gem do
       puts "########################### #{gem_name} #########################"
       puts "Deleting #{gem_name}/pkg"
       FileUtils.rm_rf("#{gem_name}/pkg")
-      cmd = "cd #{gem_name} && bundle exec rake gem"; puts cmd; system cmd
-      cmd = "cd #{gem_name}/pkg && gem install spree_#{gem_name}-#{version}.gem"; puts cmd; system cmd
+      sh "cd #{gem_name} && bundle exec rake gem"
+      sh "cd #{gem_name}/pkg && gem install spree_#{gem_name}-#{version}.gem"
     end
     puts "Deleting pkg directory"
     FileUtils.rm_rf("pkg")
-    cmd = "bundle exec rake gem"; puts cmd; system cmd
-    cmd = "gem install pkg/spree-#{version}.gem"; puts cmd; system cmd
+    sh "bundle exec rake gem"
+    sh "gem install pkg/spree-#{version}.gem"
   end
 end
 
 namespace :gem do
-  desc "Release all gems to gemcutter. Package spree components, then push spree"
+  desc "Release all gems to Gemfury. Package spree components, then push spree"
   task :release do
+    def gemfury_push(gem_file)
+      sh "curl -F package=@#{gem_file} https://#{ENV.fetch('GEMFURY_TOKEN')}@push.fury.io/#{ENV.fetch('GEMFURY_USERNAME')}/"
+    end
+
     version = File.read(File.expand_path("../SPREE_VERSION", __FILE__)).strip
 
     %w(core api backend frontend sample cmd).each do |gem_name|
       puts "########################### #{gem_name} #########################"
-      cmd = "cd #{gem_name}/pkg && gem push spree_#{gem_name}-#{version}.gem"; puts cmd; system cmd
+      gemfury_push "#{gem_name}/pkg/spree_#{gem_name}-#{version}.gem"
     end
-    cmd = "gem push pkg/spree-#{version}.gem"; puts cmd; system cmd
+
+    puts "########################### spree #########################"
+    gemfury_push "pkg/spree-#{version}.gem"
+
+    sh "git tag v#{version} -m 'Release #{version}'"
+    sh "git push origin v#{version}"
   end
 end
 
@@ -108,3 +117,6 @@ task :sandbox do
     exec("lib/sandbox.sh")
   end
 end
+
+desc "Build and release all gems to Gemfury."
+task :release => ['gem:build', 'gem:release']
