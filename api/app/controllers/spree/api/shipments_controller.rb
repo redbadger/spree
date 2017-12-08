@@ -10,7 +10,7 @@ module Spree
         authorize! :create, Shipment
         quantity = params[:quantity].to_i
         @shipment = @order.shipments.create(stock_location_id: params[:stock_location_id])
-        @order.contents.add(variant, quantity, nil, @shipment)
+        @order.contents.add(variant, quantity, shipment: @shipment)
 
         @shipment.save!
 
@@ -45,7 +45,7 @@ module Spree
       def add
         quantity = params[:quantity].to_i
 
-        @shipment.order.contents.add(variant, quantity, nil, @shipment)
+        @shipment.order.contents.add(variant, quantity, shipment: @shipment)
 
         respond_with(@shipment, default_template: :show)
       end
@@ -53,7 +53,7 @@ module Spree
       def remove
         quantity = params[:quantity].to_i
 
-        @shipment.order.contents.remove(variant, quantity, @shipment)
+        @shipment.order.contents.remove(variant, quantity, shipment: @shipment)
         @shipment.reload if @shipment.persisted?
         respond_with(@shipment, default_template: :show)
       end
