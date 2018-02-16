@@ -43,6 +43,7 @@ module Spree
     end
 
     def ==(obj)
+      return false unless obj.respond_to?(:money)
       @money == obj.money
     end
   end
